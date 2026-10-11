@@ -6,6 +6,8 @@
 // @author       Ali Bilik
 // @match        *://arkunkut.com/*
 // @match        *://*.arkunkut.com/*
+// @updateURL    https://raw.githubusercontent.com/alibilik4/OTO-YA-MA-ARKUNKUT/main/oto-yama.user.js
+// @downloadURL  https://raw.githubusercontent.com/alibilik4/OTO-YA-MA-ARKUNKUT/main/oto-yama.user.js
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
@@ -1331,9 +1333,9 @@
                 <input id="r" type="hidden" value="hepsi">
 
                 <div class="ayb-grid" style="margin-top:10px;">
-                 <div><label>Min. Toplam Ganimet</label><input id="min" type="number" value="5000"></div>
-                 <div><label>Min. Haydut Sayısı</label><input id="minh" type="number" value="0"></div>
-                 <div><label>Maks. Mesafe (Dk)</label><input id="max" type="number" value="90"></div>
+                  <div><label>Min. Toplam Ganimet</label><input id="min" type="number" value="5000"></div>
+                  <div><label>Min. Haydut Sayısı</label><input id="minh" type="number" value="0"></div>
+                  <div><label>Maks. Mesafe (Dk)</label><input id="max" type="number" value="90"></div>
                 </div>
 
                 <div style="margin-top:10px; display:flex; gap:6px; align-items:center;">
