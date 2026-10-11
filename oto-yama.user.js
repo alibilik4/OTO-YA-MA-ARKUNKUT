@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Ali System Otomatik Yağma
 // @namespace    http://tampermonkey.net/
-// @version      1.4.0
-// @description  30 dk otomatik + manuel tarama, tam ganimet boşaltmaya göre dinamik asker hesabı ve Ali Bilik System imzası.
+// @version      1.5.0
+// @description  30 dk otomatik + manuel tarama, tam ganimet boşaltmaya göre dinamik asker hesabı, pencere içi yazı boyutu ayarı ve Ali Bilik System imzası.
 // @author       Ali Bilik
 // @match        *://arkunkut.com/*
 // @match        *://*.arkunkut.com/*
@@ -15,7 +15,7 @@
 (() => {
     "use strict";
 
-    console.log("[Ali System] v1.4.0 başlatılıyor...");
+    console.log("[Ali System] v1.5.0 başlatılıyor...");
 
     // --- ÖNCEKİ PANEL VE KALINTILARI TEMİZLEME ---
     const oldPanel = document.getElementById("ayb");
@@ -56,18 +56,18 @@
 
     const CHANGELOG = [
         {
+            version: "v1.5.0",
+            date: "11.10.2026",
+            notes: [
+                "Yaylak listesi pencerelerine (Tüm Yaylaklar & Yeni Yaylaklar) özel Yazı Boyutu (Font Zoom) ayarı eklendi."
+            ]
+        },
+        {
             version: "v1.4.0",
             date: "11.10.2026",
             notes: [
                 "Ek asker alanı kaldırıldı. Asker hesabı doğrudan yaylaktaki TÜM GANİMETİ boşaltacak şekilde otomatikleştirildi.",
                 "30 dakikalık otomatik tarama yanında anlık manuel tarama butonu entegre edildi."
-            ]
-        },
-        {
-            version: "v1.3.1",
-            date: "11.10.2026",
-            notes: [
-                "Başlatıcı esnekliği artırıldı."
             ]
         }
     ];
@@ -75,6 +75,7 @@
     const CONFIG = {
         STORAGE_KEY_ARMY: "DEDEYE_FARM_ARMY_V1",
         STORAGE_KEY_SCALE: "DEDEYE_FARM_SCALE_V1",
+        STORAGE_KEY_FONT_SIZE: "DEDEYE_FARM_FONT_SIZE_V1",
         STORAGE_KEY_RAID_TIMES: "DEDEYE_FARM_RAID_TIMES_V1",
         STORAGE_KEY_STATS: "DEDEYE_FARM_STATS_V1",
         EXCLUDE_UNITS: new Set(["koçbaşı", "mancınık", "göçmen", "başbuğ", "gözcü", "yaya er", "kalkanlı", "konar", "şad", "buyruk"]),
@@ -88,6 +89,7 @@
         minH: 0,
         max: 90,
         scale: 1.0,
+        modalFontSize: "11px",
         useKarargah: true,
         autoRaid: false,
         sortBy: "ganimet",
@@ -396,7 +398,6 @@
     };
 
     const Automation = {
-        // GANİMETİN TAMAMINI BOŞALTACAK MİKTARDA VE HAYDUTLARI VURACAK ASKER HESABI
         calculateRaidArmyForTarget(target) {
             const selectedUnitIds = UI.getSelectedUnitTypes();
             const armyData = Engine.getArmyData();
@@ -405,11 +406,9 @@
             const targetBandits = Number(target.h) || 0;
             const targetTotalLoot = Number(target.totalAmount) || 0;
 
-            // Öncelik 1: Haydutları kesmek için minimum gereken asker sayısı
             let remainingBanditCount = targetBandits;
             let currentCarryingCapacity = 0;
 
-            // 1. Adım: Haydutları karşılayacak askerleri seç
             for (const id of selectedUnitIds) {
                 const available = Engine.getUnitCount(id, armyData.army);
                 if (available <= 0) continue;
@@ -429,10 +428,8 @@
                 }
             }
 
-            // Haydut sayısı mevcut askerlerle karşılanamıyorsa yetersizdir.
             if (remainingBanditCount > 0) return null;
 
-            // 2. Adım: Tüm ganimeti taşımak için eksik kalan kapasiteyi tamamla
             let remainingLootToCarry = Math.max(0, targetTotalLoot - currentCarryingCapacity);
 
             if (remainingLootToCarry > 0) {
@@ -872,7 +869,7 @@
                             <td><span style="color:#ff4b4b;">⚔ ${r.h}</span></td>
                             <td>${isSafe ? `<b style="color:#ffd43b;">♞ ${Utils.fmt(reqTotal)}</b>` : `<b style="color:#ff4b4b;">⚠ Yetersiz</b>`}</td>
                             <td>
-                                <div style="font-size:10px; color:#aaa; display:flex; gap:6px;">
+                                <div style="display:flex; gap:6px; font-size:0.9em; color:#aaa;">
                                     <span>⛏ ${Utils.fmtK(r.allLoot.demir)}</span>
                                     <span>🪨 ${Utils.fmtK(r.allLoot.tas)}</span>
                                     <span>🪵 ${Utils.fmtK(r.allLoot.odun)}</span>
@@ -889,13 +886,22 @@
             }
 
             modal.innerHTML = `
-                <div class="ayb-modal-content" style="width:900px; max-width:95vw;">
+                <div class="ayb-modal-content" style="width:920px; max-width:95vw;">
                     <div class="ayb-modal-header" style="border-color:#2ecc71;">
                         <b style="color:#2ecc71;">🔔 YENİ TESPİT EDİLEN YAYLAKLAR (${State.newTargets.length} Adet)</b>
                         <button class="ayb-modal-close">×</button>
                     </div>
                     <div class="ayb-modal-body" style="padding:10px;">
-                        <table class="yaylak-table">
+                        <div class="filter-bar-modal">
+                            <label>🔤 Yazı Boyutu:</label>
+                            <select id="modal-font-size-select">
+                                <option value="9px" ${State.modalFontSize === '9px' ? 'selected' : ''}>%80 (Küçük)</option>
+                                <option value="11px" ${State.modalFontSize === '11px' ? 'selected' : ''}>%100 (Normal)</option>
+                                <option value="13px" ${State.modalFontSize === '13px' ? 'selected' : ''}>%120 (Büyük)</option>
+                                <option value="15px" ${State.modalFontSize === '15px' ? 'selected' : ''}>%140 (Mega)</option>
+                            </select>
+                        </div>
+                        <table class="yaylak-table" style="font-size: ${State.modalFontSize};">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -919,6 +925,12 @@
 
             modal.querySelector(".ayb-modal-close").onclick = () => modal.remove();
             modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+            modal.querySelector("#modal-font-size-select").onchange = (e) => {
+                State.modalFontSize = e.target.value;
+                GM_setValue(CONFIG.STORAGE_KEY_FONT_SIZE, State.modalFontSize);
+                modal.querySelector(".yaylak-table").style.fontSize = State.modalFontSize;
+            };
 
             modal.querySelectorAll(".table-action-btn").forEach(btn => {
                 btn.onclick = () => {
@@ -959,7 +971,7 @@
                             <td><span style="color:#ff4b4b;">⚔ ${r.h}</span></td>
                             <td>${isSafe ? `<b style="color:#ffd43b;">♞ ${Utils.fmt(reqTotal)}</b>` : `<b style="color:#ff4b4b;">⚠ Yetersiz</b>`}</td>
                             <td>
-                                <div style="font-size:10px; color:#aaa; display:flex; gap:6px;">
+                                <div style="display:flex; gap:6px; font-size:0.9em; color:#aaa;">
                                     <span>⛏ ${Utils.fmtK(r.allLoot.demir)}</span>
                                     <span>🪨 ${Utils.fmtK(r.allLoot.tas)}</span>
                                     <span>🪵 ${Utils.fmtK(r.allLoot.odun)}</span>
@@ -976,7 +988,7 @@
             }
 
             modal.innerHTML = `
-                <div class="ayb-modal-content" style="width:900px; max-width:95vw;">
+                <div class="ayb-modal-content" style="width:920px; max-width:95vw;">
                     <div class="ayb-modal-header">
                         <b>🏹 AKTİF YAYLAK LİSTESİ (${State.targets.length} Hedef)</b>
                         <button class="ayb-modal-close">×</button>
@@ -994,9 +1006,17 @@
                             <button id="modal-sort-order-btn" title="Sıralama Yönü">
                                 ${State.sortOrder === 'desc' ? '⬇ Büyükten Küçüğe' : '⬆ Küçükten Büyüğe'}
                             </button>
+
+                            <label style="margin-left:auto;">🔤 Yazı Boyutu:</label>
+                            <select id="modal-font-size-select">
+                                <option value="9px" ${State.modalFontSize === '9px' ? 'selected' : ''}>%80 (Küçük)</option>
+                                <option value="11px" ${State.modalFontSize === '11px' ? 'selected' : ''}>%100 (Normal)</option>
+                                <option value="13px" ${State.modalFontSize === '13px' ? 'selected' : ''}>%120 (Büyük)</option>
+                                <option value="15px" ${State.modalFontSize === '15px' ? 'selected' : ''}>%140 (Mega)</option>
+                            </select>
                         </div>
 
-                        <table class="yaylak-table">
+                        <table class="yaylak-table" style="font-size: ${State.modalFontSize};">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -1020,6 +1040,12 @@
 
             modal.querySelector(".ayb-modal-close").onclick = () => modal.remove();
             modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+            modal.querySelector("#modal-font-size-select").onchange = (e) => {
+                State.modalFontSize = e.target.value;
+                GM_setValue(CONFIG.STORAGE_KEY_FONT_SIZE, State.modalFontSize);
+                modal.querySelector(".yaylak-table").style.fontSize = State.modalFontSize;
+            };
 
             modal.querySelector("#modal-sort-by").onchange = (e) => {
                 State.sortBy = e.target.value;
@@ -1233,21 +1259,21 @@
              .ayb-modal-header button:hover { color:#fff; }
              .ayb-modal-body { padding:16px; overflow:auto; color:#ccc; font-size:11px; }
 
-             .filter-bar-modal { display:flex; gap:10px; align-items:center; margin-bottom:12px; background:#000; padding:8px 12px; border-radius:8px; border:1px solid #222; }
-             .filter-bar-modal select { background:#111; color:#ffd43b; border:1px solid #333; border-radius:6px; padding:4px 8px; outline:none; }
-             .filter-bar-modal button { background:#ffd43b; color:#000; font-weight:bold; border:none; border-radius:6px; padding:5px 12px; cursor:pointer; }
+             .filter-bar-modal { display:flex; gap:10px; align-items:center; margin-bottom:12px; background:#000; padding:8px 12px; border-radius:8px; border:1px solid #222; font-size:11px; }
+             .filter-bar-modal select { background:#111; color:#ffd43b; border:1px solid #333; border-radius:6px; padding:4px 8px; outline:none; font-size:11px; }
+             .filter-bar-modal button { background:#ffd43b; color:#000; font-weight:bold; border:none; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:11px; }
 
              .changelog-item { margin-bottom:15px; border-bottom:1px dashed #333; padding-bottom:10px; }
              .changelog-ver { display:flex; justify-content:space-between; color:#ffd43b; font-weight:bold; font-size:12px; margin-bottom:6px; }
              .changelog-item ul { margin:0; padding-left:18px; }
              .changelog-item li { margin-bottom:4px; line-height:1.4; color:#eee; }
 
-             .yaylak-table { width:100%; border-collapse:collapse; text-align:left; font-size:11px; }
+             .yaylak-table { width:100%; border-collapse:collapse; text-align:left; }
              .yaylak-table th { background:#000; color:#ffd43b; padding:10px 8px; border-bottom:2px solid #333; font-weight:bold; }
              .yaylak-table td { padding:8px; border-bottom:1px solid #222; color:#eee; }
              .yaylak-table-row { transition:background 0.2s; cursor:pointer; }
              .yaylak-table-row:hover { background:#1a1a1a; }
-             .table-action-btn { background:#ffd43b; color:#000; border:none; padding:4px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:10px; }
+             .table-action-btn { background:#ffd43b; color:#000; border:none; padding:4px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.9em; }
              .table-action-btn:hover { background:#fff; }
             `;
             if (typeof GM_addStyle !== "undefined") {
@@ -1262,12 +1288,14 @@
         init() {
             this.injectStyles();
 
+            State.modalFontSize = GM_getValue(CONFIG.STORAGE_KEY_FONT_SIZE, "11px");
+
             const p = document.createElement("div");
             p.id = "ayb";
             p.innerHTML = `
               <div id="ayb-head">
                <div id="ayb-emblem">🐺</div>
-               <div id="ayb-title"><b>Ali System Otomatik Yağma</b><small>V1.4.0 BOYDAN MOD</small></div>
+               <div id="ayb-title"><b>Ali System Otomatik Yağma</b><small>V1.5.0 BOYDAN MOD</small></div>
                <button id="ayb-collapse" title="Aç / Kapat (K kısayolu)">−</button>
               </div>
               <div id="ayb-body">
